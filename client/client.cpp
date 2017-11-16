@@ -12,11 +12,15 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "client.h"
+
 using namespace std;
+
 const unsigned MAXBUFLEN = 512;
 int sockfd;
 
-void *process_connection(void *arg) {
+void * client::process_connection(void *arg)
+{
     int n;
     char buf[MAXBUFLEN];
     pthread_detach(pthread_self());
@@ -39,7 +43,8 @@ void *process_connection(void *arg) {
 
 //const unsigned serv_port = 5100;
 
-int main(int argc, char **argv) {
+int client::run(int argc, char **argv)
+{
     int rv, flag;
     struct addrinfo hints, *res, *ressave;
     pthread_t tid;

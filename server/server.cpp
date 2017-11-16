@@ -11,13 +11,15 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "server.h"
+
 using namespace std;
 
 //const unsigned port = 5100;
 const unsigned MAXBUFLEN = 512;
 
 
-int main() {
+int server::run() {
     int serv_sockfd, cli_sockfd;
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t sock_len;
