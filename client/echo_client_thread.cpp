@@ -41,7 +41,6 @@ void *process_connection(void *arg) {
 
 int main(int argc, char **argv) {
     int rv, flag;
-    ssize_t n;
     struct addrinfo hints, *res, *ressave;
     pthread_t tid;
 

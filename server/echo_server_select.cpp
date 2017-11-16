@@ -21,7 +21,6 @@ int main() {
     int serv_sockfd, cli_sockfd;
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t sock_len;
-    pid_t child_pid;
     ssize_t n;
     char buf[MAXBUFLEN];
     fd_set readfds, masters;
