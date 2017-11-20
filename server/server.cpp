@@ -18,6 +18,11 @@ using namespace std;
 //const unsigned port = 5100;
 const unsigned MAXBUFLEN = 512;
 
+int server::init(std::string user_info_file, std::string configuration_file)
+{
+	
+	return EXIT_SUCCESS;
+}
 
 int server::run() {
     int serv_sockfd, cli_sockfd;
@@ -92,4 +97,3 @@ int server::run() {
     }
     close(serv_sockfd);
 }
-
