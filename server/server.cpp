@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "file_handler.h"
 #include "server.h"
 
 using namespace std;
@@ -18,13 +19,16 @@ using namespace std;
 //const unsigned port = 5100;
 const unsigned MAXBUFLEN = 512;
 
-int server::init(std::string user_info_file, std::string configuration_file)
+int server::init(std::string user_info_file_path, std::string configuration_file_path)
 {
-	
+	user_info_file_handler _user_info_file_handler(user_info_file_path);
+	std::unordered_map<std::string, user_info> _user_info_map;
+	_user_info_file_handler.load_user_info(_user_info_map);
 	return EXIT_SUCCESS;
 }
 
-int server::run() {
+int server::run()
+{
     int serv_sockfd, cli_sockfd;
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t sock_len;

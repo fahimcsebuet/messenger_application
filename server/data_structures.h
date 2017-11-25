@@ -12,8 +12,17 @@ public:
         this->password = password;
         this->contact_user_name_list = contact_user_name_list;
     }
+    user_info()
+    {
+    }
+    // user_info(const user_info& _user_info)
+    // {
+    //     this->user_name = _user_info.user_name;
+    //     this->password = _user_info.password;
+    //     this->contact_user_name_list = _user_info.contact_user_name_list;
+    // }
 
-private:
+//private:
     std::string user_name;
     std::string password;
     std::vector<std::string> contact_user_name_list;
