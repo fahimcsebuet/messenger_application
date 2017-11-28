@@ -15,5 +15,7 @@ int main(int argc, char **argv)
     std::string _configuration_file(argv[2]);
     server _server;
     _server.init(_user_info_file, _configuration_file);
-    return _server.run();
+    _server.run();
+    _server.exit();
+    return EXIT_SUCCESS;
 }

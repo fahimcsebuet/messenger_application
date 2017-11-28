@@ -21,9 +21,18 @@ const unsigned MAXBUFLEN = 512;
 
 int server::init(std::string user_info_file_path, std::string configuration_file_path)
 {
+	this->user_info_file_path = user_info_file_path;
 	user_info_file_handler _user_info_file_handler(user_info_file_path);
 	std::unordered_map<std::string, user_info> _user_info_map;
 	_user_info_file_handler.load_user_info(_user_info_map);
+	return EXIT_SUCCESS;
+}
+
+int server::exit()
+{
+	user_info_file_handler _user_info_file_handler(user_info_file_path);
+	std::unordered_map<std::string, user_info> _user_info_map;
+	_user_info_file_handler.save_user_info(_user_info_map);
 	return EXIT_SUCCESS;
 }
 

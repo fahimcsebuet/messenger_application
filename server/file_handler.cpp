@@ -75,6 +75,7 @@ int user_info_file_handler::load_user_info(std::unordered_map<std::string, user_
         }
     }
 
+    _user_info_file_stream.close();
     return EXIT_SUCCESS;
 }
 
@@ -90,6 +91,7 @@ int user_info_file_handler::save_user_info(std::unordered_map<std::string, user_
     _user_info_file_stream.clear();
     if(user_info_map.empty())
     {
+        _user_info_file_stream.close();
         return EXIT_SUCCESS;
     }
 
@@ -99,15 +101,30 @@ int user_info_file_handler::save_user_info(std::unordered_map<std::string, user_
         std::string _username = _user_info_map_itr->first;
         user_info _user_info = _user_info_map_itr->second;
         std::string _password = _user_info.password;
-        // write to file
+        std::string _line_of_file = _username + "|" + _password;
         std::vector<std::string>::iterator _contact_list_itr = _user_info.contact_user_name_list.begin();
+        std::string _friend_user_names = "";
+
         while(_contact_list_itr != _user_info.contact_user_name_list.end())
         {
-            std::string _friend_user_name = *_contact_list_itr;
-            // write to file
+            if(_contact_list_itr == _user_info.contact_user_name_list.begin())
+            {
+                _line_of_file += "|";
+            }
+            _friend_user_names += *_contact_list_itr;
+            if(_contact_list_itr != _user_info.contact_user_name_list.end() - 1)
+            {
+                _friend_user_names += ";";
+            }
+
             _contact_list_itr++;
         }
+
+        _line_of_file += (_friend_user_names + "\n");
+        _user_info_file_stream.write(_line_of_file.c_str(), _line_of_file.length());
         _user_info_map_itr++;
     }
+
+    _user_info_file_stream.close();
     return EXIT_SUCCESS;
 }
