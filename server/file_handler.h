@@ -20,7 +20,7 @@ public:
     }
 
     int load_user_info(std::unordered_map<std::string, user_info>& user_info_map);
-    int save_user_info(const std::unordered_map<std::string, user_info>& user_info_map);
+    int save_user_info(std::unordered_map<std::string, user_info>& user_info_map);
 
 private:
     std::string file_path;

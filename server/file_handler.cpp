@@ -53,7 +53,7 @@ int user_info_file_handler::load_user_info(std::unordered_map<std::string, user_
     {
         std::string _user_name = "";
         std::string _password = "";
-        std::vector<std::string> _contact_user_info_list;
+        std::vector<std::string> _contact_user_name_list;
         std::vector<std::string> _splitted_line = utility::split_string(_line, '|');
         if(_splitted_line.size() > 0)
         {
@@ -65,12 +65,12 @@ int user_info_file_handler::load_user_info(std::unordered_map<std::string, user_
             if(_splitted_line.size() > 2)
             {
                 std::string _contacts_string = _splitted_line.at(2);
-                _contact_user_info_list = utility::split_string(_contacts_string, ';');
+                _contact_user_name_list = utility::split_string(_contacts_string, ';');
             }
         }
         if(!_user_name.empty() && !_password.empty())
         {
-            user_info _user_info(_user_name, _password, _contact_user_info_list);
+            user_info _user_info(_user_name, _password, _contact_user_name_list);
             user_info_map[_user_name] = _user_info;
         }
     }
@@ -78,7 +78,36 @@ int user_info_file_handler::load_user_info(std::unordered_map<std::string, user_
     return EXIT_SUCCESS;
 }
 
-int user_info_file_handler::save_user_info(const std::unordered_map<std::string, user_info>& user_info_map)
+int user_info_file_handler::save_user_info(std::unordered_map<std::string, user_info>& user_info_map)
 {
+    std::ofstream _user_info_file_stream(file_path);
+    if(_user_info_file_stream.fail())
+    {
+        std::cout << "The user info file does not exist" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    _user_info_file_stream.clear();
+    if(user_info_map.empty())
+    {
+        return EXIT_SUCCESS;
+    }
+
+    std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.begin();
+    while(_user_info_map_itr != user_info_map.end())
+    {
+        std::string _username = _user_info_map_itr->first;
+        user_info _user_info = _user_info_map_itr->second;
+        std::string _password = _user_info.password;
+        // write to file
+        std::vector<std::string>::iterator _contact_list_itr = _user_info.contact_user_name_list.begin();
+        while(_contact_list_itr != _user_info.contact_user_name_list.end())
+        {
+            std::string _friend_user_name = *_contact_list_itr;
+            // write to file
+            _contact_list_itr++;
+        }
+        _user_info_map_itr++;
+    }
     return EXIT_SUCCESS;
 }
