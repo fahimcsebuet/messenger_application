@@ -2,6 +2,11 @@
 
 #include "client.h"
 
+void sigint_handler(int signal)
+{
+
+}
+
 int main(int argc, char **argv)
 {
     if(argc != 2)

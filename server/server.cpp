@@ -11,14 +11,16 @@
 #include <stdio.h>
 #include <errno.h>
 #include <netdb.h>
+#include <signal.h>
 
 #include "server.h"
 
-//const unsigned port = 5100;
 const unsigned MAXBUFLEN = 512;
+server server::_server;
 
 int server::init(std::string user_info_file_path, std::string configuration_file_path)
 {
+	signal(SIGINT, sigint_handler);
 	// handle user info file
 	this->user_info_file_path = user_info_file_path;
 	user_info_file_handler _user_info_file_handler(user_info_file_path);
@@ -28,6 +30,7 @@ int server::init(std::string user_info_file_path, std::string configuration_file
 	this->configuration_file_path = configuration_file_path;
 	configuration_file_handler _configuration_file_handler(configuration_file_path);
 	_configuration_file_handler.load_configuration(configuration_map);
+	_server = *this;
 	return EXIT_SUCCESS;
 }
 
@@ -162,4 +165,11 @@ int server::get_port_from_configuration_map()
 	{
 		return std::stoi(_config_map_itr->second);
 	}
+}
+
+void server::sigint_handler(int signal)
+{
+	std::cout << "SIGINT handler" << std::endl;
+	_server._exit();
+	exit(0);
 }

@@ -21,6 +21,8 @@ private:
 
     std::string get_fully_qualified_domain_name();
     int get_port_from_configuration_map();
+    static void sigint_handler(int signal);
+    static server _server;
 };
 
 #endif

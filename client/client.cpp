@@ -11,18 +11,22 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "client.h"
 #include "file_handler.h"
 
 const unsigned MAXBUFLEN = 512;
-int sockfd;
+int client::sockfd = 0;
+client client::_client;
 
 int client::init(std::string configuration_file_path)
 {
+	signal(SIGINT, sigint_handler);
 	this->configuration_file_path = configuration_file_path;
 	configuration_file_handler _configuration_file_handler(configuration_file_path);
 	_configuration_file_handler.load_configuration(configuration_map);
+	_client = *this;
 	return EXIT_SUCCESS;
 }
 
@@ -126,4 +130,11 @@ void * client::process_connection(void *arg)
 		buf[n] = '\0';
 		std::cout << buf << std::endl;
     }
+}
+
+void client::sigint_handler(int signal)
+{
+	std::cout << "SIGINT handler" << std::endl;
+	_client._exit();
+	exit(0);
 }
