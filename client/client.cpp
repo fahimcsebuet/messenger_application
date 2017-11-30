@@ -13,87 +13,117 @@
 #include <errno.h>
 
 #include "client.h"
-
-using namespace std;
+#include "file_handler.h"
 
 const unsigned MAXBUFLEN = 512;
 int sockfd;
+
+int client::init(std::string configuration_file_path)
+{
+	this->configuration_file_path = configuration_file_path;
+	configuration_file_handler _configuration_file_handler(configuration_file_path);
+	_configuration_file_handler.load_configuration(configuration_map);
+	return EXIT_SUCCESS;
+}
+
+int client::run()
+{
+    int rv, flag;
+    struct addrinfo hints, *res, *ressave;
+    pthread_t tid;
+
+	const char * _servhost = 
+		configuration_map.find(configuration_keys::server_host) != configuration_map.end() ? 
+		configuration_map.find(configuration_keys::server_host)->second.c_str()
+		: NULL;
+
+	const char * _servport = configuration_map.find(configuration_keys::server_port) != configuration_map.end() ? 
+		configuration_map.find(configuration_keys::server_port)->second.c_str()
+		: NULL;
+
+    std::cout << _servhost << " " << _servport << std::endl;
+
+    bzero(&hints, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    
+	if ((rv = getaddrinfo(_servhost, _servport, &hints, &res)) != 0)
+	{
+		std::cout << "getaddrinfo wrong: " << gai_strerror(rv) << std::endl;
+		return EXIT_FAILURE;
+    }
+
+    ressave = res;
+    flag = 0;
+	do 
+	{
+		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (sockfd < 0) 
+			continue;
+		if (connect(sockfd, res->ai_addr, res->ai_addrlen) == 0)
+		{
+			flag = 1;
+			break;
+		}
+		close(sockfd);
+	} while ((res = res->ai_next) != NULL);
+
+    freeaddrinfo(ressave);
+
+	if (flag == 0)
+	{
+		fprintf(stderr, "cannot connect\n");
+		return EXIT_FAILURE;
+    }
+
+    pthread_create(&tid, NULL, &process_connection, NULL);
+
+    std::string oneline;
+	while (getline(std::cin, oneline))
+	{
+		if (oneline == "quit")
+		{
+			close(sockfd);
+			break;
+		}
+		else
+		{
+			write(sockfd, oneline.c_str(), oneline.length());
+		}
+    }
+    return EXIT_SUCCESS;
+}
+
+int client::_exit()
+{
+	configuration_file_handler _configuration_file_handler(configuration_file_path);
+	_configuration_file_handler.save_configuration(configuration_map);
+	return EXIT_SUCCESS;
+}
 
 void * client::process_connection(void *arg)
 {
     int n;
     char buf[MAXBUFLEN];
     pthread_detach(pthread_self());
-    while (1) {
-	n = read(sockfd, buf, MAXBUFLEN);
-	if (n <= 0) {
-	    if (n == 0) {
-		cout << "server closed" << endl;
-	    } else {
-		cout << "something wrong" << endl;
-	    }
-	    close(sockfd);
-	    // we directly exit the whole process.
-	    exit(1);
-	}
-	buf[n] = '\0';
-	cout << buf << endl;
+	while (1)
+	{
+		n = read(sockfd, buf, MAXBUFLEN);
+		if (n <= 0)
+		{
+			if (n == 0)
+			{
+				std::cout << "server closed" << std::endl;
+			}
+			else
+			{
+				std::cout << "something wrong" << std::endl;
+			}
+			close(sockfd);
+			// we directly exit the whole process.
+			exit(1);
+		}
+		buf[n] = '\0';
+		std::cout << buf << std::endl;
     }
-}
-
-//const unsigned serv_port = 5100;
-
-int client::run(int argc, char **argv)
-{
-    int rv, flag;
-    struct addrinfo hints, *res, *ressave;
-    pthread_t tid;
-
-    if (argc != 3) {
-	cout << "echo_client server_name_or_ip port" << endl;
-	exit(1);
-    }
-
-    cout << argv[1] << " " << argv[2] << endl;
-
-    bzero(&hints, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    
-    if ((rv = getaddrinfo(argv[1], argv[2], &hints, &res)) != 0) {
-	cout << "getaddrinfo wrong: " << gai_strerror(rv) << endl;
-	exit(1);
-    }
-
-    ressave = res;
-    flag = 0;
-    do {
-	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (sockfd < 0) 
-	    continue;
-	if (connect(sockfd, res->ai_addr, res->ai_addrlen) == 0) {
-	    flag = 1;
-	    break;
-	}
-	close(sockfd);
-    } while ((res = res->ai_next) != NULL);
-    freeaddrinfo(ressave);
-
-    if (flag == 0) {
-	fprintf(stderr, "cannot connect\n");
-	exit(1);
-    }
-
-    pthread_create(&tid, NULL, &process_connection, NULL);
-
-    string oneline;
-    while (getline(cin, oneline)) {
-	if (oneline == "quit") {
-	    close(sockfd);
-	    break;
-	} else {
-	    write(sockfd, oneline.c_str(), oneline.length());
-	}
-    }
-    exit(0);
 }

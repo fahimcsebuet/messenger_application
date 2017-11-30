@@ -31,16 +31,6 @@ int server::init(std::string user_info_file_path, std::string configuration_file
 	return EXIT_SUCCESS;
 }
 
-int server::exit()
-{
-	user_info_file_handler _user_info_file_handler(user_info_file_path);
-	_user_info_file_handler.save_user_info(user_info_map);
-
-	configuration_file_handler _configuration_file_handler(configuration_file_path);
-	_configuration_file_handler.save_configuration(configuration_map);
-	return EXIT_SUCCESS;
-}
-
 int server::run()
 {
 	int _port = get_port_from_configuration_map();
@@ -115,6 +105,16 @@ int server::run()
 	}
     }
     close(serv_sockfd);
+}
+
+int server::_exit()
+{
+	user_info_file_handler _user_info_file_handler(user_info_file_path);
+	_user_info_file_handler.save_user_info(user_info_map);
+
+	configuration_file_handler _configuration_file_handler(configuration_file_path);
+	_configuration_file_handler.save_configuration(configuration_map);
+	return EXIT_SUCCESS;
 }
 
 std::string server::get_fully_qualified_domain_name()

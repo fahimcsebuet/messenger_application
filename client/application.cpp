@@ -1,7 +1,18 @@
+#include <iostream>
+
 #include "client.h"
 
 int main(int argc, char **argv)
 {
+    if(argc != 2)
+    {
+        std::cout << "Invalid number of parameters!" << std::endl;
+        return EXIT_FAILURE;
+    }
+    std::string _configuration_file(argv[1]);
     client _client;
-    return _client.run(argc, argv);
+    _client.init(_configuration_file);
+    _client.run();
+    _client._exit();
+    return EXIT_SUCCESS;
 }

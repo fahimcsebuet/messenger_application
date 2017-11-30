@@ -16,6 +16,6 @@ int main(int argc, char **argv)
     server _server;
     _server.init(_user_info_file, _configuration_file);
     _server.run();
-    _server.exit();
+    _server._exit();
     return EXIT_SUCCESS;
 }
