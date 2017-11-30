@@ -1,3 +1,6 @@
+#ifndef SERVER_DATA_STRUCTURES_H_
+#define SERVER_DATA_STRUCTURES_H_
+
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -38,3 +41,5 @@ public:
 private:
     int port;
 };
+
+#endif

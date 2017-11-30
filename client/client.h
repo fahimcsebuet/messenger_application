@@ -1,3 +1,6 @@
+#ifndef CLIENT_CLIENT_H_
+#define CLIENT_CLIENT_H_
+
 class client
 {
 public:
@@ -5,3 +8,5 @@ public:
 private:
     static void * process_connection(void *arg);
 };
+
+#endif

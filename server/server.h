@@ -1,4 +1,10 @@
-#include <string.h>
+#ifndef SERVER_SERVER_H_
+#define SERVER_SERVER_H_
+
+#include <string>
+#include <unordered_map>
+
+#include "file_handler.h"
 
 class server
 {
@@ -9,4 +15,12 @@ public:
 
 private:
     std::string user_info_file_path;
+    std::string configuration_file_path;
+    std::unordered_map<std::string, user_info> user_info_map;
+    std::unordered_map<std::string, std::string> configuration_map;
+
+    std::string get_fully_qualified_domain_name();
+    int get_port_from_configuration_map();
 };
+
+#endif
