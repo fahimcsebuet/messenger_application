@@ -107,7 +107,8 @@ int server::run()
 	    }
 	}
     }
-    close(serv_sockfd);
+	close(serv_sockfd);
+	return EXIT_SUCCESS;
 }
 
 int server::_exit()

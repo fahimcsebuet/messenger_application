@@ -17,7 +17,7 @@
 #include "file_handler.h"
 
 const unsigned MAXBUFLEN = 512;
-int client::sockfd = 0;
+int client::sockfd = -1;
 client client::_client;
 
 int client::init(std::string configuration_file_path)
@@ -30,7 +30,7 @@ int client::init(std::string configuration_file_path)
 	return EXIT_SUCCESS;
 }
 
-int client::run()
+int client::start()
 {
     int rv, flag;
     struct addrinfo hints, *res, *ressave;
@@ -83,23 +83,21 @@ int client::run()
     pthread_create(&tid, NULL, &process_connection, NULL);
 
     std::string oneline;
-	while (getline(std::cin, oneline))
-	{
-		if (oneline == "quit")
-		{
-			close(sockfd);
-			break;
-		}
-		else
-		{
-			write(sockfd, oneline.c_str(), oneline.length());
-		}
-    }
     return EXIT_SUCCESS;
+}
+
+int client::send_data_to_server(std::string data)
+{
+	if(sockfd != -1)
+	{
+		write(sockfd, data.c_str(), data.length());
+	}
+	return EXIT_SUCCESS;
 }
 
 int client::_exit()
 {
+	if(sockfd != -1) close(sockfd);
 	configuration_file_handler _configuration_file_handler(configuration_file_path);
 	_configuration_file_handler.save_configuration(configuration_map);
 	return EXIT_SUCCESS;

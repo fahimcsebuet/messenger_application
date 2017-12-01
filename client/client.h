@@ -8,7 +8,8 @@ class client
 {
 public:
     int init(std::string configuration_file_path);
-    int run();
+    int start();
+    int send_data_to_server(std::string data);
     int _exit();
 private:
     std::string configuration_file_path;
