@@ -122,7 +122,6 @@ void * client::process_connection(void *arg)
 				std::cout << "something wrong" << std::endl;
 			}
 			close(sockfd);
-			// we directly exit the whole process.
 			exit(1);
 		}
 		buf[n] = '\0';

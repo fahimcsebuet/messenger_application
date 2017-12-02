@@ -19,6 +19,7 @@ void trim_string(std::string& splitted_command_string)
 
 int handle_commands_to_server(client in_client)
 {
+    char _sentinel = -1;
     std::string _command;
     while (getline(std::cin, _command))
 	{
@@ -38,6 +39,7 @@ int handle_commands_to_server(client in_client)
             while(_username.empty())
             {
                 std::cout << "User name cannot be empty" << std::endl;
+                std::cout << "Please enter username: ";
                 getline(std::cin, _username);
             }
             std::cout << "Please enter password: ";
@@ -46,11 +48,39 @@ int handle_commands_to_server(client in_client)
             while(_password.empty())
             {
                 std::cout << "Password cannot be empty" << std::endl;
+                std::cout << "Please enter password: ";
                 getline(std::cin, _password);
             }
-            std::string _data_for_server = _command + ":" + _username + ":" + _password;
+            std::string _data_for_server = _command + _sentinel + _username + _sentinel + _password;
             in_client.send_data_to_server(_data_for_server);
         }
+        else if (_command == "l")
+        {
+            std::cout << "Login" << std::endl;
+            std::string _username = "";
+            std::string _password = "";
+            std::cout << "Please enter username: ";
+            getline(std::cin, _username);
+            trim_string(_username);
+            while(_username.empty())
+            {
+                std::cout << "User name cannot be empty" << std::endl;
+                std::cout << "Please enter username: ";
+                getline(std::cin, _username);
+            }
+            std::cout << "Please enter password: ";
+            getline(std::cin, _password);
+            trim_string(_password);
+            while(_password.empty())
+            {
+                std::cout << "Password cannot be empty" << std::endl;
+                std::cout << "Please enter password: ";
+                getline(std::cin, _password);
+            }
+            std::string _data_for_server = _command + _sentinel + _username + _sentinel + _password;
+            in_client.send_data_to_server(_data_for_server);
+        }
+
 		else
 		{
 			in_client.send_data_to_server(_command);
@@ -71,7 +101,6 @@ int main(int argc, char **argv)
     _client.init(_configuration_file);
     _client.start();
     handle_commands_to_server(_client);
-    // Use the executor class
     _client._exit();
     return EXIT_SUCCESS;
 }

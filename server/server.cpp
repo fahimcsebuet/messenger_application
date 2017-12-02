@@ -15,7 +15,7 @@
 
 #include "server.h"
 
-const unsigned MAXBUFLEN = 512;
+const unsigned MAXBUFLEN = 1024;
 server server::_server;
 
 int server::init(std::string user_info_file_path, std::string configuration_file_path)
@@ -40,7 +40,7 @@ int server::run()
     int serv_sockfd, cli_sockfd;
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t sock_len;
-    ssize_t n;
+    ssize_t _buf_size;
     char buf[MAXBUFLEN];
     fd_set readfds, masters;
     int maxfd;
@@ -67,45 +67,51 @@ int server::run()
     maxfd = serv_sockfd;
     sockfds.push_back(serv_sockfd);
 
-    for (; ;) {
-	readfds = masters;
-	select(maxfd+1, &readfds, NULL, NULL, NULL);
+	for (; ;)
+	{
+		readfds = masters;
+		select(maxfd+1, &readfds, NULL, NULL, NULL);
 
-	std::list<int> l_tmp(sockfds);
-	std::list<int>::iterator itr;
-	for (std::list<int>::iterator itr = l_tmp.begin(); itr !=
-		 l_tmp.end(); ++itr) {
-	    int sock_tmp = *itr;
+		std::list<int> l_tmp(sockfds);
+		std::list<int>::iterator itr;
+		for (std::list<int>::iterator itr = l_tmp.begin(); itr !=
+				l_tmp.end(); ++itr) {
+			int sock_tmp = *itr;
 
-	    if (FD_ISSET(sock_tmp, &readfds)) {
-		if (sock_tmp == serv_sockfd) {
-		    // new connection request
-		    cli_sockfd = accept(serv_sockfd, (struct sockaddr
-						      *)&cli_addr, &sock_len);
-		    std::cout << "New connection accepted" << std::endl;
-		    FD_SET(cli_sockfd, &masters);
-		    if (cli_sockfd > maxfd)
-			maxfd = cli_sockfd;
-		    sockfds.push_back(cli_sockfd);
-		} else {
-		    // data message
-		    n = read(sock_tmp, buf, MAXBUFLEN);
-		    if (n <= 0) {
-			if (n == 0) 
-			    std::cout << "connection closed" << std::endl;
+			if (FD_ISSET(sock_tmp, &readfds)) {
+			if (sock_tmp == serv_sockfd)
+			{
+				// new connection request
+				cli_sockfd = accept(serv_sockfd, (struct sockaddr
+									*)&cli_addr, &sock_len);
+				std::cout << "New connection accepted" << std::endl;
+				FD_SET(cli_sockfd, &masters);
+				if (cli_sockfd > maxfd)
+				maxfd = cli_sockfd;
+				sockfds.push_back(cli_sockfd);
+			}
 			else
-			    perror("something wrong");
-			close(sock_tmp);
-			FD_CLR(sock_tmp, &masters);
-			sockfds.remove(sock_tmp);
-		    } else {
-			buf[n] = '\0';
-			std::cout << buf << std::endl;
-			write(sock_tmp, buf, strlen(buf));
-		    }
+			{
+				// data message
+				_buf_size = read(sock_tmp, buf, MAXBUFLEN);
+				if (_buf_size <= 0)
+				{
+					if (_buf_size == 0)
+						std::cout << "connection closed" << std::endl;
+					else
+						perror("something wrong");
+					close(sock_tmp);
+					FD_CLR(sock_tmp, &masters);
+					sockfds.remove(sock_tmp);
+				}
+				else
+				{
+					buf[_buf_size] = '\0';
+					handle_command_from_client(sock_tmp, std::string(buf));
+				}
+			}
+	    	}
 		}
-	    }
-	}
     }
 	close(serv_sockfd);
 	return EXIT_SUCCESS;
@@ -165,6 +171,50 @@ int server::get_port_from_configuration_map()
 	else
 	{
 		return std::stoi(_config_map_itr->second);
+	}
+}
+
+void server::handle_command_from_client(int sockfd, std::string command)
+{
+	char _sentinel = -1;
+	std::vector<std::string> _parsed_command = utility::split_string(command, _sentinel);
+	if(_parsed_command.empty())
+	{
+		std::string _error_message = "Invalid Request";
+		write(sockfd, _error_message.c_str(), _error_message.length());
+		return;
+	}
+	std::string _command_operator = _parsed_command.at(0);
+	if(_command_operator == "r")
+	{
+		if(_parsed_command.size() != 3)
+		{
+			std::string _error_message = "Invalid Registration Request";
+			write(sockfd, _error_message.c_str(), _error_message.length());
+			return;
+		}
+		std::string _username = _parsed_command.at(1);
+		std::string _password = _parsed_command.at(2);
+		std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.find(_username);
+		if(_user_info_map_itr != user_info_map.end())
+		{
+			std::string _error_message = "500";
+			write(sockfd, _error_message.c_str(), _error_message.length());
+			return;
+		}
+		else
+		{
+			user_info _user_info;
+			_user_info.user_name = _username;
+			_user_info.password = _password;
+			_user_info.contact_user_name_list = {};
+			user_info_map[_username] = _user_info;
+			user_info_file_handler _user_info_file_handler(user_info_file_path);
+			_user_info_file_handler.save_user_info(user_info_map);
+			std::string _message = "200";
+			write(sockfd, _message.c_str(), _message.length());
+			return;
+		}
 	}
 }
 
