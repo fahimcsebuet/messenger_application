@@ -24,7 +24,7 @@ private:
     void handle_command_from_client(int sockfd, std::string command);
     void send_data_to_client(int sockfd, std::string command, std::string data);
     static void sigint_handler(int signal);
-    static server _server;
+    static server *_server;
 };
 
 #endif

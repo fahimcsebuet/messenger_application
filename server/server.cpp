@@ -16,10 +16,11 @@
 #include "server.h"
 
 const unsigned MAXBUFLEN = 1024;
-server server::_server;
+server *server::_server = NULL;
 
 int server::init(std::string user_info_file_path, std::string configuration_file_path)
 {
+	_server = this;
 	signal(SIGINT, sigint_handler);
 	// handle user info file
 	this->user_info_file_path = user_info_file_path;
@@ -30,7 +31,6 @@ int server::init(std::string user_info_file_path, std::string configuration_file
 	this->configuration_file_path = configuration_file_path;
 	configuration_file_handler _configuration_file_handler(configuration_file_path);
 	_configuration_file_handler.load_configuration(configuration_map);
-	_server = *this;
 	return EXIT_SUCCESS;
 }
 
@@ -119,6 +119,7 @@ int server::run()
 
 int server::_exit()
 {
+	std::cout << user_info_map.size() << std::endl;
 	user_info_file_handler _user_info_file_handler(user_info_file_path);
 	_user_info_file_handler.save_user_info(user_info_map);
 
@@ -241,10 +242,9 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		}
 		else
 		{
-			std::string _message = "500";
-			send_data_to_client(sockfd, _command_operator, _message);
-			return;
+			_message = "500";
 		}
+		send_data_to_client(sockfd, _command_operator, _message);
 	}
 }
 
@@ -258,6 +258,6 @@ void server::send_data_to_client(int sockfd, std::string command, std::string da
 void server::sigint_handler(int signal)
 {
 	std::cout << "SIGINT handler" << std::endl;
-	_server._exit();
+	_server->_exit();
 	exit(0);
 }
