@@ -22,6 +22,7 @@ private:
     std::string get_fully_qualified_domain_name();
     int get_port_from_configuration_map();
     void handle_command_from_client(int sockfd, std::string command);
+    void send_data_to_client(int sockfd, std::string command, std::string data);
     static void sigint_handler(int signal);
     static server _server;
 };

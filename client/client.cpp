@@ -45,8 +45,6 @@ int client::start()
 		configuration_map.find(configuration_keys::server_port)->second.c_str()
 		: NULL;
 
-    std::cout << _servhost << " " << _servport << std::endl;
-
     bzero(&hints, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -81,8 +79,6 @@ int client::start()
     }
 
     pthread_create(&tid, NULL, &process_connection, NULL);
-
-    std::string oneline;
     return EXIT_SUCCESS;
 }
 

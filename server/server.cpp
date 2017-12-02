@@ -181,7 +181,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 	if(_parsed_command.empty())
 	{
 		std::string _error_message = "Invalid Request";
-		write(sockfd, _error_message.c_str(), _error_message.length());
+		send_data_to_client(sockfd, "no", _error_message);
 		return;
 	}
 	std::string _command_operator = _parsed_command.at(0);
@@ -190,7 +190,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		if(_parsed_command.size() != 3)
 		{
 			std::string _error_message = "Invalid Registration Request";
-			write(sockfd, _error_message.c_str(), _error_message.length());
+			send_data_to_client(sockfd, _command_operator, _error_message);
 			return;
 		}
 		std::string _username = _parsed_command.at(1);
@@ -199,7 +199,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		if(_user_info_map_itr != user_info_map.end())
 		{
 			std::string _error_message = "500";
-			write(sockfd, _error_message.c_str(), _error_message.length());
+			send_data_to_client(sockfd, _command_operator, _error_message);
 			return;
 		}
 		else
@@ -212,10 +212,47 @@ void server::handle_command_from_client(int sockfd, std::string command)
 			user_info_file_handler _user_info_file_handler(user_info_file_path);
 			_user_info_file_handler.save_user_info(user_info_map);
 			std::string _message = "200";
-			write(sockfd, _message.c_str(), _message.length());
+			send_data_to_client(sockfd, _command_operator, _message);
 			return;
 		}
 	}
+	else if(_command_operator == "l")
+	{
+		if(_parsed_command.size() != 3)
+		{
+			std::string _error_message = "Invalid Login Request";
+			send_data_to_client(sockfd, _command_operator, _error_message);
+			return;
+		}
+		std::string _username = _parsed_command.at(1);
+		std::string _password = _parsed_command.at(2);
+		std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.find(_username);
+		std::string _message = "";
+		if(_user_info_map_itr != user_info_map.end())
+		{
+			if(_password == _user_info_map_itr->second.password)
+			{
+				_message = "200";
+			}
+			else
+			{
+				_message = "500";
+			}
+		}
+		else
+		{
+			std::string _message = "500";
+			send_data_to_client(sockfd, _command_operator, _message);
+			return;
+		}
+	}
+}
+
+void server::send_data_to_client(int sockfd, std::string command, std::string data)
+{
+	char _sentinel = -1;
+	data = command + _sentinel + data;
+	write(sockfd, data.c_str(), data.length());
 }
 
 void server::sigint_handler(int signal)

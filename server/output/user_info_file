@@ -1,4 +1,4 @@
-user5|password5|user1;user2
-user6|password6|user1
-user2|password2|user1;user5
 user1|password1|user2;user5;user6
+user2|password2|user1;user5
+user6|password6|user1
+user5|password5|user1;user2
