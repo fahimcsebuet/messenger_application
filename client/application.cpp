@@ -6,11 +6,42 @@
 int handle_commands_to_server(client* in_client)
 {
     char _sentinel = -1;
-    std::string _command;
+    std::string _command = "";
     while (in_client->get_command_error())
 	{
-        std::cout << "Type command" << std::endl;
-        getline(std::cin, _command);
+        std::vector<std::string> _response_from_server = in_client->get_response_from_server();
+        if(!_response_from_server.empty())
+        {
+            if(_response_from_server.at(0) == "r" && _response_from_server.size() == 4)
+            {
+                if(_response_from_server.at(1) == "200")
+                {
+                    std::cout << "Automatic Login..." << std::endl;
+                    std::string _username = _response_from_server.at(2);
+                    std::string _password = _response_from_server.at(3);
+                    _command = "l";
+                    std::string _data_for_server = _command + _sentinel + _username + _sentinel + _password;
+                    in_client->send_data_to_server(_data_for_server);
+                    continue;
+                }
+                else
+                {
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
+            }
+            else
+            {
+                std::cout << "Type command" << std::endl;
+                getline(std::cin, _command);
+            }
+        }
+        else
+        {
+            std::cout << "Type command" << std::endl;
+            getline(std::cin, _command);
+        }
+
 		if (_command == "exit")
 		{
 			in_client->_exit();
@@ -68,7 +99,6 @@ int handle_commands_to_server(client* in_client)
             std::string _data_for_server = _command + _sentinel + _username + _sentinel + _password;
             in_client->send_data_to_server(_data_for_server);
         }
-
 		else
 		{
 			in_client->send_data_to_server(_command);

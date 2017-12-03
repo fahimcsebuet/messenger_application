@@ -99,7 +99,7 @@ int server::run()
 					if (_buf_size == 0)
 						std::cout << "connection closed" << std::endl;
 					else
-						perror("something wrong");
+						perror("somsomething wrong");
 					close(sock_tmp);
 					FD_CLR(sock_tmp, &masters);
 					sockfds.remove(sock_tmp);
@@ -119,7 +119,6 @@ int server::run()
 
 int server::_exit()
 {
-	std::cout << user_info_map.size() << std::endl;
 	user_info_file_handler _user_info_file_handler(user_info_file_path);
 	_user_info_file_handler.save_user_info(user_info_map);
 
@@ -199,7 +198,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.find(_username);
 		if(_user_info_map_itr != user_info_map.end())
 		{
-			std::string _error_message = "500";
+			std::string _error_message = std::string("500");
 			send_data_to_client(sockfd, _command_operator, _error_message);
 			return;
 		}
@@ -212,7 +211,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 			user_info_map[_username] = _user_info;
 			user_info_file_handler _user_info_file_handler(user_info_file_path);
 			_user_info_file_handler.save_user_info(user_info_map);
-			std::string _message = "200";
+			std::string _message = std::string("200") + _sentinel + _username + _sentinel + _password;
 			send_data_to_client(sockfd, _command_operator, _message);
 			return;
 		}
@@ -233,18 +232,19 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		{
 			if(_password == _user_info_map_itr->second.password)
 			{
-				_message = "200";
+				_message = std::string("200");
 			}
 			else
 			{
-				_message = "500";
+				_message = std::string("500");
 			}
 		}
 		else
 		{
-			_message = "500";
+			_message = std::string("500");
 		}
 		send_data_to_client(sockfd, _command_operator, _message);
+		return;
 	}
 }
 
@@ -257,7 +257,6 @@ void server::send_data_to_client(int sockfd, std::string command, std::string da
 
 void server::sigint_handler(int signal)
 {
-	std::cout << "SIGINT handler" << std::endl;
 	_server->_exit();
 	exit(0);
 }

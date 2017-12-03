@@ -23,6 +23,7 @@ int client::init(std::string configuration_file_path)
 {
 	_client = this;
 	command_error = true;
+	response_received = false;
 	signal(SIGINT, sigint_handler);
 	this->configuration_file_path = configuration_file_path;
 	configuration_file_handler _configuration_file_handler(configuration_file_path);
@@ -86,10 +87,16 @@ int client::send_data_to_server(std::string data)
 {
 	if(sockfd != -1)
 	{
+		response_from_server.clear();
+		command_error = true;
+		response_received = false;
 		write(sockfd, data.c_str(), data.length());
 		std::cout << "Processing..." << std::endl;
-		// Can make it more intuitive. Condition variable until response received
-		sleep(1);
+		std::unique_lock<std::mutex> _response_lock(response_mutex);
+		while(!response_received)
+		{
+			response_condition_variable.wait(_response_lock);
+		}
 	}
 	return EXIT_SUCCESS;
 }
@@ -130,29 +137,33 @@ void * client::process_connection(void *arg)
 
 void client::handle_command_from_server(int sockfd, std::string command)
 {
+	std::unique_lock<std::mutex> _response_lock(_client->response_mutex);
 	char _sentinel = -1;
-	std::cout << command << std::endl;
-	std::vector<std::string> _splitted_command = utility::split_string(command, _sentinel);
+	_client->response_from_server = utility::split_string(command, _sentinel);
 
-	if(_splitted_command.size() <= 1)
+	if(_client->response_from_server.size() <= 1)
 	{
 		std::cout << "Bad Response from Server" << std::endl;
 		return;
 	}
 
-	std::string _command_operator = _splitted_command.at(0);
-	std::string _command_message = _splitted_command.at(1);
+	std::string _command_operator = _client->response_from_server.at(0);
+	std::string _command_message = _client->response_from_server.at(1);
 	if(_command_operator == "r")
 	{
 		if(_command_message == "500")
 		{
 			std::cout << "Username not available. Try Again!" << std::endl;
 			_client->command_error = true;
+			_client->response_received = true;
+			_client->response_condition_variable.notify_all();
 		}
 		else if(_command_message == "200")
 		{
 			std::cout << "User registered" << std::endl;
-			_client->command_error = false;
+			_client->command_error = true; // Special case
+			_client->response_received = true;
+			_client->response_condition_variable.notify_all();
 		}
 	}
 	else if(_command_operator == "l")
@@ -160,19 +171,20 @@ void client::handle_command_from_server(int sockfd, std::string command)
 		if(_command_message == "500")
 		{
 			std::cout << "Login failure. Try Again!" << std::endl;
-			_client->command_error = true;
+			_client->command_error = true;			
 		}
 		else if(_command_message == "200")
 		{
 			std::cout << "User logged in" << std::endl;
 			_client->command_error = false;
 		}
+		_client->response_received = true;
+		_client->response_condition_variable.notify_all();
 	}
 }
 
 void client::sigint_handler(int signal)
 {
-	std::cout << "SIGINT handler" << std::endl;
 	_client->_exit();
 	exit(0);
 }
