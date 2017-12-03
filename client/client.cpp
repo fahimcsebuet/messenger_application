@@ -124,34 +124,9 @@ int client::_exit()
 
 int client::start_p2p()
 {
-    int serv_sockfd, cli_sockfd, *sock_ptr;
-    struct sockaddr_in serv_addr, cli_addr;
-    socklen_t sock_len;
     pthread_t tid;
-    serv_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
-    bzero((void*)&serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(p2p_port);
-
-    bind(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-
-    listen(serv_sockfd, 5);
-
-    for (; ;)
-    {
-        sock_len = sizeof(cli_addr);
-        cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
-
-        std::cout << "remote client IP: " << inet_ntoa(cli_addr.sin_addr);
-        std::cout << ", port: " << ntohs(cli_addr.sin_port) << std::endl;
-
-        sock_ptr = (int *)malloc(sizeof(int));
-        *sock_ptr = cli_sockfd;
-
-        pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
-    }
+    pthread_create(&tid, NULL, &process_start_p2p, NULL);
+    return EXIT_SUCCESS;
 }
 
 void * client::process_connection(void *arg)
@@ -189,6 +164,8 @@ void client::handle_command_from_server(int sockfd, std::string command)
     if(_client->response_from_server.size() <= 1)
     {
         std::cout << "Bad Response from Server" << std::endl;
+        _client->response_received = true;
+        _client->response_condition_variable.notify_all();
         return;
     }
 
@@ -199,14 +176,10 @@ void client::handle_command_from_server(int sockfd, std::string command)
         if(_command_message == "500")
         {
             std::cout << "Username not available. Try Again!" << std::endl;
-            _client->response_received = true;
-            _client->response_condition_variable.notify_all();
         }
         else if(_command_message == "200")
         {
             std::cout << "User registered" << std::endl;
-            _client->response_received = true;
-            _client->response_condition_variable.notify_all();
         }
     }
     else if(_command_operator == "l")
@@ -217,14 +190,12 @@ void client::handle_command_from_server(int sockfd, std::string command)
         }
         else if(_command_message == "200")
         {
+            _client->username = _client->response_from_server.at(2);
             std::cout << "User logged in" << std::endl;
         }
-        _client->response_received = true;
-        _client->response_condition_variable.notify_all();
     }
     else if(_command_operator == "loc_friends" || _command_operator == "loc_friend")
     {
-        std::cout << command << std::endl;
         int _number_of_online_friends = std::stoi(_client->response_from_server.at(1));
         int _friend_position = 1;
         for(int _i=0; _i < _number_of_online_friends; _i++)
@@ -235,10 +206,36 @@ void client::handle_command_from_server(int sockfd, std::string command)
             friend_info _friend_info(_friend_user_name, _friend_ip, _friend_port);
             _client->online_friends_list[_friend_user_name] = _friend_info;
         }
-        std::cout << _client->online_friends_list.size() << std::endl;
-        _client->response_received = true;
-        _client->response_condition_variable.notify_all();
     }
+    else if(_command_operator == "ir")
+    {
+        std::cout << "Friend Request from " << _client->response_from_server.at(1);
+        if(_client->response_from_server.size() > 2)
+        {
+            std::cout << " >> " << _client->response_from_server.at(2);
+        }
+        std::cout << std::endl;
+    }
+    else if(_command_operator == "iar")
+    {
+        std::cout << "Approved Friend Request from " << _client->response_from_server.at(1);
+        if(_client->response_from_server.size() > 2)
+        {
+            std::cout << " >> " << _client->response_from_server.at(2);
+        }
+        std::cout << std::endl;
+    }
+    else if(_command_operator == "idr")
+    {
+        std::cout << "Denied Friend Request from " << _client->response_from_server.at(1);
+        if(_client->response_from_server.size() > 2)
+        {
+            std::cout << " >> " << _client->response_from_server.at(2);
+        }
+        std::cout << std::endl;
+    }
+    _client->response_received = true;
+    _client->response_condition_variable.notify_all();
 }
 
 void client::sigint_handler(int signal)
@@ -272,6 +269,38 @@ void * client::process_connection_p2p(void *arg) {
     }
     close(sockfd);
     return(NULL);
+}
+
+void * client::process_start_p2p(void *arg)
+{
+    int serv_sockfd, cli_sockfd, *sock_ptr;
+    struct sockaddr_in serv_addr, cli_addr;
+    socklen_t sock_len;
+    pthread_t tid;
+    serv_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    bzero((void*)&serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serv_addr.sin_port = htons(_client->p2p_port);
+
+    bind(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
+    listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
+
+    for (; ;)
+    {
+        sock_len = sizeof(cli_addr);
+        cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
+
+        std::cout << "remote client IP: " << inet_ntoa(cli_addr.sin_addr);
+        std::cout << ", port: " << ntohs(cli_addr.sin_port) << std::endl;
+
+        sock_ptr = (int *)malloc(sizeof(int));
+        *sock_ptr = cli_sockfd;
+
+        pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
+    }
 }
 
 std::string client::get_fully_qualified_domain_name()

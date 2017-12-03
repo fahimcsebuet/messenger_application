@@ -14,6 +14,7 @@ public:
         this->user_name = user_name;
         this->password = password;
         this->contact_user_name_list = contact_user_name_list;
+        this->potential_friends_list = {};
         this->ip = "";
         this->port = -1;
         this->is_logged_in = false;
@@ -24,6 +25,7 @@ public:
         this->user_name = "";
         this->password = "";
         this->contact_user_name_list = {};
+        this->potential_friends_list = {};
         this->ip = "";
         this->port = -1;
         this->is_logged_in = false;
@@ -33,6 +35,7 @@ public:
     std::string user_name;
     std::string password;
     std::vector<std::string> contact_user_name_list;
+    std::vector<std::string> potential_friends_list;
     std::string ip;
     int port;
     bool is_logged_in;

@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <signal.h>
+#include <algorithm>
 
 #include "server.h"
 
@@ -100,6 +101,22 @@ int server::run()
 						std::cout << "connection closed" << std::endl;
 					else
 						perror("something wrong");
+					
+					std::unordered_map<int, std::string>::iterator _sockfd_to_username_itr =
+						sockfd_to_username.find(sock_tmp);
+					if(_sockfd_to_username_itr != sockfd_to_username.end())
+					{
+						std::unordered_map<std::string, user_info>::iterator _user_info_itr =
+							user_info_map.find(_sockfd_to_username_itr->second);
+						if(_user_info_itr != user_info_map.end())
+						{
+							_user_info_itr->second.is_logged_in = false;
+							_user_info_itr->second.ip = "";
+							_user_info_itr->second.port = -1;
+							_user_info_itr->second.sockfd = -1;
+						}
+					}
+
 					close(sock_tmp);
 					FD_CLR(sock_tmp, &masters);
 					sockfds.remove(sock_tmp);
@@ -234,6 +251,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 			{
 				_message = std::string("200");
 				_message = _message + _sentinel + _username + _sentinel + _password;
+				sockfd_to_username[sockfd] = _username;
 			}
 			else
 			{
@@ -265,6 +283,153 @@ void server::handle_command_from_client(int sockfd, std::string command)
 				_user_info.sockfd = sockfd;
 				_user_info_map_itr->second = _user_info;
 				send_location_info_to_clients(_username);
+			}
+		}
+	}
+	else if(_command_operator == "i")
+	{
+		if(_parsed_command.size() < 3)
+		{
+			send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Invalid Command");
+		}
+		else
+		{
+			std::string _username = _parsed_command.at(1);
+			std::string _potential_friend_username = _parsed_command.at(2);
+			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
+				user_info_map.find(_username);
+			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
+				user_info_map.find(_potential_friend_username);
+			if(_friend_user_info_map_itr != user_info_map.end() && 
+				_user_info_map_itr != user_info_map.end())
+			{
+				user_info _user_info = _user_info_map_itr->second;
+				user_info _friend_user_info = _friend_user_info_map_itr->second;
+				bool _is_friend = false;
+				for(unsigned int i=0; i<_user_info.contact_user_name_list.size(); i++)
+				{
+					if(_user_info.contact_user_name_list.at(i) == _potential_friend_username)
+					{
+						_is_friend = true;
+						break;
+					}
+				}
+
+				if(_is_friend)
+				{
+					send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Already friend");
+				}
+				else
+				{
+					std::string _data_to_friend = _username;
+					std::string _message_from_friend = "";
+					if(_parsed_command.size() > 3)
+					{
+						_message_from_friend = _parsed_command.at(3);
+						_data_to_friend += (_sentinel + _message_from_friend);
+					}
+					_friend_user_info_map_itr->second.potential_friends_list.push_back(_username);
+					if(_friend_user_info.is_logged_in)
+						send_data_to_client(_friend_user_info.sockfd, "ir", _data_to_friend);
+
+					send_data_to_client(sockfd, _command_operator, std::string("200"));
+				}
+			}
+			else
+			{
+				send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "User not found");
+			}
+		}
+	}
+	else if(_command_operator == "ia" || _command_operator == "id")
+	{
+		if(_parsed_command.size() < 3)
+		{
+			send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Invalid Command");
+		}
+		else
+		{
+			std::string _username = _parsed_command.at(1);
+			std::string _potential_friend_username = _parsed_command.at(2);
+			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
+				user_info_map.find(_username);
+			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
+				user_info_map.find(_potential_friend_username);
+			if(_friend_user_info_map_itr != user_info_map.end() && 
+				_user_info_map_itr != user_info_map.end())
+			{
+				user_info _user_info = _user_info_map_itr->second;
+				user_info _friend_user_info = _friend_user_info_map_itr->second;
+
+				bool _is_friend = false;
+				for(unsigned int i=0; i<_user_info.contact_user_name_list.size(); i++)
+				{
+					if(_user_info.contact_user_name_list.at(i) == _potential_friend_username)
+					{
+						_is_friend = true;
+						break;
+					}
+				}
+
+				bool _is_potential_friend = false;
+				for(unsigned int i=0; i<_user_info.potential_friends_list.size(); i++)
+				{
+					if(_user_info.potential_friends_list.at(i) == _potential_friend_username)
+					{
+						_is_potential_friend = true;
+						break;
+					}
+				}
+
+				if(_is_friend)
+				{
+					send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Already friend");
+				}
+				else if(!_is_potential_friend)
+				{
+					send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Did not get Request");
+				}
+				else
+				{
+					std::string _data_to_friend = _username;
+					std::string _message_from_friend = "";
+					if(_parsed_command.size() > 3)
+					{
+						_message_from_friend = _parsed_command.at(3);
+						_data_to_friend += (_sentinel + _message_from_friend);
+					}
+					if(_command_operator == "ia")
+					{
+						_user_info_map_itr->second.contact_user_name_list.push_back(_potential_friend_username);
+						_friend_user_info_map_itr->second.contact_user_name_list.push_back(_username);
+						std::vector<std::string>::iterator _potential_itr = 
+							std::find(_user_info_map_itr->second.potential_friends_list.begin(), 
+							_user_info_map_itr->second.potential_friends_list.end(), 
+							_potential_friend_username);
+						if(_potential_itr != _user_info_map_itr->second.potential_friends_list.end())
+							_user_info_map_itr->second.potential_friends_list.erase(_potential_itr);
+
+						if(_friend_user_info.is_logged_in)
+							send_data_to_client(_friend_user_info.sockfd, "iar", _data_to_friend);
+					}
+					else
+					{
+						std::vector<std::string>::iterator _potential_itr = 
+							std::find(_user_info_map_itr->second.potential_friends_list.begin(), 
+							_user_info_map_itr->second.potential_friends_list.end(), 
+							_potential_friend_username);
+						if(_potential_itr != _user_info_map_itr->second.potential_friends_list.end())
+							_user_info_map_itr->second.potential_friends_list.erase(_potential_itr);
+						if(_friend_user_info.is_logged_in)
+							send_data_to_client(_friend_user_info.sockfd, "iar", _data_to_friend);
+					}
+
+					send_data_to_client(sockfd, _command_operator, std::string("200"));
+				}
+			}
+			else
+			{
+				send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "User not found");
 			}
 		}
 	}

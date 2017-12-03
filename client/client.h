@@ -53,8 +53,13 @@ public:
     {
         return online_friends_list;
     }
+    std::string get_username()
+    {
+        return username;
+    }
     int start_p2p();
 private:
+    std::string username;
     std::string configuration_file_path;
     std::unordered_map<std::string, std::string> configuration_map;
     bool response_received;
@@ -70,6 +75,7 @@ private:
     static void sigint_handler(int signal);
     static client *_client;
     static void * process_connection_p2p(void *arg);
+    static void * process_start_p2p(void *arg);
     std::string get_fully_qualified_domain_name();
 };
 
