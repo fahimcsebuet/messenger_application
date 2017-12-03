@@ -99,7 +99,7 @@ int server::run()
 					if (_buf_size == 0)
 						std::cout << "connection closed" << std::endl;
 					else
-						perror("somsomething wrong");
+						perror("something wrong");
 					close(sock_tmp);
 					FD_CLR(sock_tmp, &masters);
 					sockfds.remove(sock_tmp);
@@ -233,6 +233,7 @@ void server::handle_command_from_client(int sockfd, std::string command)
 			if(_password == _user_info_map_itr->second.password)
 			{
 				_message = std::string("200");
+				_message = _message + _sentinel + _username + _sentinel + _password;
 			}
 			else
 			{
@@ -246,6 +247,27 @@ void server::handle_command_from_client(int sockfd, std::string command)
 		send_data_to_client(sockfd, _command_operator, _message);
 		return;
 	}
+	else if(_command_operator == "loc")
+	{
+		if(_parsed_command.size() == 4)
+		{
+			std::string _username = _parsed_command.at(1);
+			std::string _p2p_ip = _parsed_command.at(2);
+			int _p2p_port = std::stoi(_parsed_command.at(3));
+			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
+				user_info_map.find(_username);
+			if(_user_info_map_itr != user_info_map.end())
+			{
+				user_info _user_info = _user_info_map_itr->second;
+				_user_info.ip = _p2p_ip;
+				_user_info.port = _p2p_port;
+				_user_info.is_logged_in = true;
+				_user_info.sockfd = sockfd;
+				_user_info_map_itr->second = _user_info;
+				send_location_info_to_clients(_username);
+			}
+		}
+	}
 }
 
 void server::send_data_to_client(int sockfd, std::string command, std::string data)
@@ -253,6 +275,52 @@ void server::send_data_to_client(int sockfd, std::string command, std::string da
 	char _sentinel = -1;
 	data = command + _sentinel + data;
 	write(sockfd, data.c_str(), data.length());
+}
+
+void server::send_location_info_to_clients(std::string username)
+{
+	char _sentinel = -1;
+	std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
+		user_info_map.find(username);
+	if(_user_info_map_itr != user_info_map.end())
+	{
+		user_info _user_info = _user_info_map_itr->second;
+		std::vector<std::string> _contact_usernames_list = _user_info.contact_user_name_list;
+		int _number_of_online_friends = 0;
+		std::vector<std::string>::iterator _contact_usernames_list_itr = 
+			_contact_usernames_list.begin();
+		
+		std::string _data_to_user = "";
+		while(_contact_usernames_list_itr != _contact_usernames_list.end())
+		{
+			std::string _friend_username = *_contact_usernames_list_itr;
+			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
+				user_info_map.find(_friend_username);
+			if(_friend_user_info_map_itr != user_info_map.end())
+			{
+				user_info _friend_user_info = _friend_user_info_map_itr->second;
+				if(_friend_user_info.is_logged_in)
+				{
+					_number_of_online_friends++;
+					int _friend_sockfd = _friend_user_info.sockfd;
+					std::string _friend_ip = _friend_user_info.ip;
+					int _friend_port = _friend_user_info.port;
+					std::string _command_to_friend = "loc_friend";
+					std::string _user_ip = _user_info.ip;
+					int _user_port = _user_info.port;
+					std::string _data_to_friend = std::to_string(1) + _sentinel + 
+						username + _sentinel + _user_ip + _sentinel + std::to_string(_user_port);
+					send_data_to_client(_friend_sockfd, _command_to_friend, _data_to_friend);
+					_data_to_user += (_sentinel + _friend_username + _sentinel + 
+						_friend_ip + _sentinel + std::to_string(_friend_port));
+				}
+			}
+			_contact_usernames_list_itr++;
+		}
+		std::string _command_to_user = "loc_friends";
+		_data_to_user = std::to_string(_number_of_online_friends) + _data_to_user;
+		send_data_to_client(_user_info.sockfd, _command_to_user, _data_to_user);
+	}
 }
 
 void server::sigint_handler(int signal)

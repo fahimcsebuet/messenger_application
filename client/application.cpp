@@ -3,11 +3,11 @@
 
 #include "client.h"
 
-int handle_commands_to_server(client* in_client)
+int handle_credential_commands_to_server(client* in_client)
 {
     char _sentinel = -1;
     std::string _command = "";
-    while (in_client->get_command_error())
+    while (true)
 	{
         std::vector<std::string> _response_from_server = in_client->get_response_from_server();
         if(!_response_from_server.empty())
@@ -29,6 +29,24 @@ int handle_commands_to_server(client* in_client)
                     std::cout << "Type command" << std::endl;
                     getline(std::cin, _command);
                 }
+            }
+            else if(_response_from_server.at(0) == "l" && _response_from_server.size() == 4)
+            {
+                if(_response_from_server.at(1) == "200")
+                {
+                    std::string _username = _response_from_server.at(2);
+                    in_client->send_location_info_to_server(_username);
+                    continue;
+                }
+                else
+                {
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
+            }
+            else if(_response_from_server.at(0) == "loc_friends" || _response_from_server.at(0) == "loc_friend")
+            {
+                break;
             }
             else
             {
@@ -118,7 +136,7 @@ int main(int argc, char **argv)
     client _client;
     _client.init(_configuration_file);
     _client.start();
-    handle_commands_to_server(&_client);
+    handle_credential_commands_to_server(&_client);
     _client._exit();
     return EXIT_SUCCESS;
 }

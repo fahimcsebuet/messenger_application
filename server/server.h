@@ -23,6 +23,7 @@ private:
     int get_port_from_configuration_map();
     void handle_command_from_client(int sockfd, std::string command);
     void send_data_to_client(int sockfd, std::string command, std::string data);
+    void send_location_info_to_clients(std::string username);
     static void sigint_handler(int signal);
     static server *_server;
 };
