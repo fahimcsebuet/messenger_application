@@ -177,6 +177,16 @@ int handle_p2p_commands(client* in_client)
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
             }
+            else if(_response_from_server.at(0) == "m")
+            {
+                if(_response_from_server.at(1) == "500")
+                {
+                    if(_response_from_server.size() > 2)
+                        std::cout << _response_from_server.at(2) << std::endl;
+                }
+                std::cout << "Type command" << std::endl;
+                getline(std::cin, _command);
+            }
             else if(_response_from_server.at(0) == "ia" || _response_from_server.at(0) == "id")
             {
                 std::string _message_type = (_response_from_server.at(0) == "ia")? "Approval" : "Denial";
@@ -244,6 +254,22 @@ int handle_p2p_commands(client* in_client)
                 in_client->send_data_to_server(_data_for_server);
             }
             else if(_command_operator == "m")
+            {
+                std::string _data_for_server = _command_operator + _sentinel + in_client->get_username();
+                if(_parsed_command.at(1) == in_client->get_username())
+                {
+                    std::cout << "Can not send message to self" << std::endl;
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
+                for(unsigned int i=1; i<_parsed_command.size(); i++)
+                {
+                    _data_for_server += (_sentinel + _parsed_command.at(i));
+                }
+
+                in_client->send_data_to_server(_data_for_server);
+            }
+            else if(_command_operator == "message")
             {
                 std::string _data_for_peer = _command_operator + _sentinel + in_client->get_username();
                 if(_parsed_command.at(1) == in_client->get_username())

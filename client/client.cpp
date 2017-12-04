@@ -361,6 +361,14 @@ void client::handle_command_from_server(int sockfd, std::string command)
         }
         std::cout << std::endl;
     }
+    else if(_command_operator == "mr")
+    {
+        if(_client->response_from_server.size() > 2)
+        {
+            std::cout << _client->response_from_server.at(1) << 
+                " >> " << _client->response_from_server.at(2) << std::endl;
+        }
+    }
     else if(_command_operator == "iar")
     {
         std::cout << "Approved Friend Request from " << _client->response_from_server.at(1);
@@ -389,7 +397,7 @@ void client::handle_command_from_peer(int sockfd, std::string command)
     std::vector<std::string> _parsed_command = utility::split_string(command, _sentinel);
     if(_parsed_command.size() == 4)
     {
-        if(_parsed_command.at(0) == "m")
+        if(_parsed_command.at(0) == "message")
         {
             std::string _from_user = _parsed_command.at(1);
             std::string _message = _parsed_command.at(3);
