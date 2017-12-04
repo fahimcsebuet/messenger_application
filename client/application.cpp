@@ -176,6 +176,7 @@ int handle_p2p_commands(client* in_client)
                 }
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
+                continue;
             }
             else if(_response_from_server.at(0) == "m")
             {
@@ -186,6 +187,7 @@ int handle_p2p_commands(client* in_client)
                 }
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
+                continue;
             }
             else if(_response_from_server.at(0) == "ia" || _response_from_server.at(0) == "id")
             {
@@ -201,6 +203,7 @@ int handle_p2p_commands(client* in_client)
                 }
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
+                continue;
             }
             else if(_response_from_server.at(0) == "logout")
             {
@@ -212,12 +215,14 @@ int handle_p2p_commands(client* in_client)
             {
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
+                continue;
             }
         }
         else
         {
             std::cout << "Type command" << std::endl;
             getline(std::cin, _command);
+            continue;
         }
 
 		if (_command == "exit")
@@ -245,6 +250,7 @@ int handle_p2p_commands(client* in_client)
                     std::cout << "Can not be friend of self" << std::endl;
                     std::cout << "Type command" << std::endl;
                     getline(std::cin, _command);
+                    continue;
                 }
                 for(unsigned int i=1; i<_parsed_command.size(); i++)
                 {
@@ -261,6 +267,7 @@ int handle_p2p_commands(client* in_client)
                     std::cout << "Can not send message to self" << std::endl;
                     std::cout << "Type command" << std::endl;
                     getline(std::cin, _command);
+                    continue;
                 }
                 for(unsigned int i=1; i<_parsed_command.size(); i++)
                 {
@@ -277,6 +284,7 @@ int handle_p2p_commands(client* in_client)
                     std::cout << "Can not send message to self" << std::endl;
                     std::cout << "Type command" << std::endl;
                     getline(std::cin, _command);
+                    continue;
                 }
                 for(unsigned int i=1; i<_parsed_command.size(); i++)
                 {
@@ -293,6 +301,7 @@ int handle_p2p_commands(client* in_client)
                     std::cout << "Connection Problem" << std::endl;
                     std::cout << "Type command" << std::endl;
                     getline(std::cin, _command);
+                    continue;
                 }
             }
         }
