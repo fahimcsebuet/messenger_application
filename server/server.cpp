@@ -482,7 +482,7 @@ void server::handle_command_from_client(int sockfd, std::vector<std::string> par
 						if(_potential_itr != _user_info_map_itr->second.potential_friends_list.end())
 							_user_info_map_itr->second.potential_friends_list.erase(_potential_itr);
 						if(_friend_user_info.is_logged_in)
-							send_data_to_client(_friend_user_info.sockfd, "iar", _data_to_friend);
+							send_data_to_client(_friend_user_info.sockfd, "idr", _data_to_friend);
 					}
 
 					send_data_to_client(sockfd, _command_operator, std::string("200"));
