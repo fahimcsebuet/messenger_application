@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <list>
 
 #include "client.h"
 
@@ -153,7 +154,6 @@ int client::start_p2p()
 int client::stop_p2p()
 {
     is_peer_running = false;
-    // stop p2p may be with condition variables
     return EXIT_SUCCESS;
 }
 
@@ -254,6 +254,7 @@ void * client::process_connect_to_p2p(void *arg)
 {
     int _sockfd;
     _sockfd = *((int *)arg);
+    std::cout << _sockfd << std::endl;
     free(arg);
     int n;
     char buf[MAXBUFLEN];
@@ -440,37 +441,118 @@ void client::print_online_friends()
 
 void * client::process_start_p2p(void *arg)
 {
-    int serv_sockfd, cli_sockfd, *sock_ptr;
+    int _port = 5100;
+    int serv_sockfd, cli_sockfd;
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t sock_len;
-    pthread_t tid;
-    serv_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
+    ssize_t _buf_size;
+    char buf[MAXBUFLEN];
+    fd_set readfds, masters;
+    int maxfd;
+    std::list<int> sockfds;
+
+    serv_sockfd = socket(PF_INET, SOCK_STREAM, 0);
+
     bzero((void*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(_client->p2p_port);
+    serv_addr.sin_port = htons(_port);
 
     bind(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
-    listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
+    listen(serv_sockfd, 5);
 
-    while(true) // _client->is_peer_running
-    {
-        sock_len = sizeof(cli_addr);
-        cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
+    sock_len = sizeof(cli_addr);
+	getsockname(serv_sockfd, (struct sockaddr *)&serv_addr, &sock_len);
 
-        std::cout << "remote client IP: " << inet_ntoa(cli_addr.sin_addr);
-        std::cout << ", port: " << ntohs(cli_addr.sin_port) << std::endl;
+    FD_ZERO(&masters);
+    FD_SET(serv_sockfd, &masters);
+    maxfd = serv_sockfd;
+    sockfds.push_back(serv_sockfd);
 
-        sock_ptr = (int *)malloc(sizeof(int));
-        *sock_ptr = cli_sockfd;
+	for (; ;)
+	{
+		readfds = masters;
+		select(maxfd+1, &readfds, NULL, NULL, NULL);
 
-        pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
+		std::list<int> l_tmp(sockfds);
+		std::list<int>::iterator itr;
+		for (std::list<int>::iterator itr = l_tmp.begin(); itr !=
+				l_tmp.end(); ++itr) {
+			int sock_tmp = *itr;
+
+			if (FD_ISSET(sock_tmp, &readfds)) {
+			if (sock_tmp == serv_sockfd)
+			{
+				// new connection request
+				cli_sockfd = accept(serv_sockfd, (struct sockaddr
+									*)&cli_addr, &sock_len);
+				std::cout << "New connection accepted" << std::endl;
+				FD_SET(cli_sockfd, &masters);
+				if (cli_sockfd > maxfd)
+				maxfd = cli_sockfd;
+				sockfds.push_back(cli_sockfd);
+			}
+			else
+			{
+				// data message
+				_buf_size = read(sock_tmp, buf, MAXBUFLEN);
+				if (_buf_size <= 0)
+				{
+					if (_buf_size == 0)
+						std::cout << "connection closed" << std::endl;
+					else
+						perror("something wrong");
+
+					close(sock_tmp);
+					FD_CLR(sock_tmp, &masters);
+					sockfds.remove(sock_tmp);
+				}
+				else
+				{
+					buf[_buf_size] = '\0';
+					std::string _buffer = std::string(buf);
+					char _sentinel = -1;
+					std::vector<std::string> _parsed_command = utility::split_string(_buffer, _sentinel);
+					handle_command_from_peer(sock_tmp, _buffer);
+				}
+			}
+	    	}
+		}
     }
+	close(serv_sockfd);
+	return(NULL);
+    // int serv_sockfd, cli_sockfd, *sock_ptr;
+    // struct sockaddr_in serv_addr, cli_addr;
+    // socklen_t sock_len;
+    // pthread_t tid;
+    // serv_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    // bzero((void*)&serv_addr, sizeof(serv_addr));
+    // serv_addr.sin_family = AF_INET;
+    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // serv_addr.sin_port = htons(_client->p2p_port);
 
-    close(serv_sockfd);
-    return(NULL);
+    // bind(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
+    // listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
+
+    // while(true) // _client->is_peer_running
+    // {
+    //     sock_len = sizeof(cli_addr);
+    //     cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
+
+    //     std::cout << "remote client IP: " << inet_ntoa(cli_addr.sin_addr);
+    //     std::cout << ", port: " << ntohs(cli_addr.sin_port) << std::endl;
+
+    //     sock_ptr = (int *)malloc(sizeof(int));
+    //     *sock_ptr = cli_sockfd;
+
+    //     pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
+    // }
+
+    // close(serv_sockfd);
+    // return(NULL);
 }
 
 std::string client::get_fully_qualified_domain_name()
