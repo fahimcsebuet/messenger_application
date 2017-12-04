@@ -138,6 +138,14 @@ int client::send_location_info_to_server(std::string username)
 int client::_exit()
 {
     if(sockfd != -1) close(sockfd);
+    std::unordered_map<std::string, friend_info>::iterator _online_friends_itr =
+        online_friends_list.begin();
+    while(_online_friends_itr != online_friends_list.end())
+    {
+        int _sockfd = _online_friends_itr->second.sockfd;
+        if(_sockfd != -1) close(_sockfd);
+        _online_friends_itr++;
+    }
     configuration_file_handler _configuration_file_handler(configuration_file_path);
     _configuration_file_handler.save_configuration(configuration_map);
     return EXIT_SUCCESS;
