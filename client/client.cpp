@@ -31,7 +31,7 @@ int client::init(std::string configuration_file_path)
     _configuration_file_handler.load_configuration(configuration_map);
 
     p2p_ip = get_fully_qualified_domain_name();
-    p2p_port = 5555; // Port for p2p connection
+    p2p_port = 5100; // Port for p2p connection
     online_friends_list = {};
     response_from_server = {};
     return EXIT_SUCCESS;
