@@ -384,7 +384,17 @@ void client::handle_command_from_server(int sockfd, std::string command)
 
 void client::handle_command_from_peer(int sockfd, std::string command)
 {
-    std::cout << command << std::endl;
+    char _sentinel = -1;
+    std::vector<std::string> _parsed_command = utility::split_string(command, _sentinel);
+    if(_parsed_command.size() == 4)
+    {
+        if(_parsed_command.at(0) == "m")
+        {
+            std::string _from_user = _parsed_command.at(1);
+            std::string _message = _parsed_command.at(3);
+            std::cout << _from_user << " >> " << _message << std::endl;
+        }
+    }
 }
 
 void client::sigint_handler(int signal)
@@ -522,37 +532,6 @@ void * client::process_start_p2p(void *arg)
     }
 	close(serv_sockfd);
 	return(NULL);
-    // int serv_sockfd, cli_sockfd, *sock_ptr;
-    // struct sockaddr_in serv_addr, cli_addr;
-    // socklen_t sock_len;
-    // pthread_t tid;
-    // serv_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
-    // bzero((void*)&serv_addr, sizeof(serv_addr));
-    // serv_addr.sin_family = AF_INET;
-    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    // serv_addr.sin_port = htons(_client->p2p_port);
-
-    // bind(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-
-    // listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
-
-    // while(true) // _client->is_peer_running
-    // {
-    //     sock_len = sizeof(cli_addr);
-    //     cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
-
-    //     std::cout << "remote client IP: " << inet_ntoa(cli_addr.sin_addr);
-    //     std::cout << ", port: " << ntohs(cli_addr.sin_port) << std::endl;
-
-    //     sock_ptr = (int *)malloc(sizeof(int));
-    //     *sock_ptr = cli_sockfd;
-
-    //     pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
-    // }
-
-    // close(serv_sockfd);
-    // return(NULL);
 }
 
 std::string client::get_fully_qualified_domain_name()
