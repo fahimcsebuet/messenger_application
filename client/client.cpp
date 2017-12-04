@@ -352,6 +352,8 @@ void * client::process_start_p2p(void *arg)
 
         pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
     }
+
+    return(NULL);
 }
 
 std::string client::get_fully_qualified_domain_name()
