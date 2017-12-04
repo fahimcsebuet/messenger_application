@@ -6,6 +6,7 @@
 
 int handle_credential_commands_to_server(client* in_client)
 {
+    std::cout << "Register or Login" << std::endl;
     char _sentinel = -1;
     std::string _command = "";
     while (true)
@@ -47,6 +48,7 @@ int handle_credential_commands_to_server(client* in_client)
             }
             else if(_response_from_server.at(0) == "loc_friends" || _response_from_server.at(0) == "loc_friend")
             {
+                in_client->start_p2p();
                 break;
             }
             else
@@ -120,7 +122,9 @@ int handle_credential_commands_to_server(client* in_client)
         }
 		else
 		{
-			in_client->send_data_to_server(_command);
+            utility::trim_string(_command);
+            if(!_command.empty())
+                std::cout << "Command not available or possible" << std::endl;
 		}
     }
     return EXIT_SUCCESS;
@@ -153,9 +157,9 @@ int pre_process_command(std::string command, std::vector<std::string>& out_comma
 int handle_p2p_commands(client* in_client)
 {
     char _sentinel = -1;
-    std::string _command = "";
     while (true)
 	{
+        std::string _command = "";
         std::vector<std::string> _response_from_server = in_client->get_response_from_server();
         if(!_response_from_server.empty())
         {
@@ -175,7 +179,7 @@ int handle_p2p_commands(client* in_client)
             }
             else if(_response_from_server.at(0) == "ia" || _response_from_server.at(0) == "id")
             {
-                std::string _message_type = (_response_from_server.at(0) == "ia")? "Apprval" : "Denial";
+                std::string _message_type = (_response_from_server.at(0) == "ia")? "Approval" : "Denial";
                 if(_response_from_server.at(1) == "200")
                 {
                     std::cout << _message_type << " Sent" << std::endl;
@@ -187,6 +191,12 @@ int handle_p2p_commands(client* in_client)
                 }
                 std::cout << "Type command" << std::endl;
                 getline(std::cin, _command);
+            }
+            else if(_response_from_server.at(0) == "logout")
+            {
+                in_client->stop_p2p();
+                std::cout << "User logged out" << std::endl;
+                handle_credential_commands_to_server(in_client);
             }
             else
             {
@@ -205,31 +215,39 @@ int handle_p2p_commands(client* in_client)
 			in_client->_exit();
 			exit(0);
         }
+        if (_command == "logout")
+		{
+            utility::trim_string(_command);
+            std::string _data_for_server = _command + _sentinel + in_client->get_username();
+            in_client->send_data_to_server(_data_for_server);
+			continue;
+        }
         std::vector<std::string> _parsed_command;
         pre_process_command(_command, _parsed_command);
         if(!_parsed_command.empty())
         {
             std::string _command_operator = _parsed_command.at(0);
-            if(_parsed_command.at(1) == in_client->get_username())
-            {
-                std::cout << "Can not be friend of self" << std::endl;
-                std::cout << "Type command" << std::endl;
-                getline(std::cin, _command);
-            }
             std::string _data_for_server = _command_operator + _sentinel + in_client->get_username();
             if(_command_operator == "i" || _command_operator == "ia" || _command_operator == "id")
             {
+                if(_parsed_command.at(1) == in_client->get_username())
+                {
+                    std::cout << "Can not be friend of self" << std::endl;
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
                 for(unsigned int i=1; i<_parsed_command.size(); i++)
                 {
                     _data_for_server += (_sentinel + _parsed_command.at(i));
                 }
             }
-
             in_client->send_data_to_server(_data_for_server);
         }
 		else
 		{
-			in_client->send_data_to_server(_command);
+			utility::trim_string(_command);
+            if(!_command.empty())
+                std::cout << "Command not available or possible" << std::endl;
 		}
     }
     return EXIT_SUCCESS;
@@ -247,7 +265,6 @@ int main(int argc, char **argv)
     _client.init(_configuration_file);
     _client.start();
     handle_credential_commands_to_server(&_client);
-    _client.start_p2p();
     handle_p2p_commands(&_client);
     _client._exit();
     return EXIT_SUCCESS;

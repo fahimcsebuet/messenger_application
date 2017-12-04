@@ -57,7 +57,9 @@ public:
     {
         return username;
     }
+    void print_online_friends();
     int start_p2p();
+    int stop_p2p();
 private:
     std::string username;
     std::string configuration_file_path;

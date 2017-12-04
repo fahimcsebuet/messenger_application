@@ -124,7 +124,10 @@ int server::run()
 				else
 				{
 					buf[_buf_size] = '\0';
-					handle_command_from_client(sock_tmp, std::string(buf));
+					std::string _buffer = std::string(buf);
+					char _sentinel = -1;
+					std::vector<std::string> _parsed_command = utility::split_string(_buffer, _sentinel);
+					handle_command_from_client(sock_tmp, _parsed_command);
 				}
 			}
 	    	}
@@ -191,27 +194,26 @@ int server::get_port_from_configuration_map()
 	}
 }
 
-void server::handle_command_from_client(int sockfd, std::string command)
+void server::handle_command_from_client(int sockfd, std::vector<std::string> parsed_command)
 {
 	char _sentinel = -1;
-	std::vector<std::string> _parsed_command = utility::split_string(command, _sentinel);
-	if(_parsed_command.empty())
+	if(parsed_command.empty())
 	{
 		std::string _error_message = "Invalid Request";
 		send_data_to_client(sockfd, "no", _error_message);
 		return;
 	}
-	std::string _command_operator = _parsed_command.at(0);
+	std::string _command_operator = parsed_command.at(0);
 	if(_command_operator == "r")
 	{
-		if(_parsed_command.size() != 3)
+		if(parsed_command.size() != 3)
 		{
 			std::string _error_message = "Invalid Registration Request";
 			send_data_to_client(sockfd, _command_operator, _error_message);
 			return;
 		}
-		std::string _username = _parsed_command.at(1);
-		std::string _password = _parsed_command.at(2);
+		std::string _username = parsed_command.at(1);
+		std::string _password = parsed_command.at(2);
 		std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.find(_username);
 		if(_user_info_map_itr != user_info_map.end())
 		{
@@ -235,14 +237,14 @@ void server::handle_command_from_client(int sockfd, std::string command)
 	}
 	else if(_command_operator == "l")
 	{
-		if(_parsed_command.size() != 3)
+		if(parsed_command.size() != 3)
 		{
 			std::string _error_message = "Invalid Login Request";
 			send_data_to_client(sockfd, _command_operator, _error_message);
 			return;
 		}
-		std::string _username = _parsed_command.at(1);
-		std::string _password = _parsed_command.at(2);
+		std::string _username = parsed_command.at(1);
+		std::string _password = parsed_command.at(2);
 		std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = user_info_map.find(_username);
 		std::string _message = "";
 		if(_user_info_map_itr != user_info_map.end())
@@ -267,11 +269,11 @@ void server::handle_command_from_client(int sockfd, std::string command)
 	}
 	else if(_command_operator == "loc")
 	{
-		if(_parsed_command.size() == 4)
+		if(parsed_command.size() == 4)
 		{
-			std::string _username = _parsed_command.at(1);
-			std::string _p2p_ip = _parsed_command.at(2);
-			int _p2p_port = std::stoi(_parsed_command.at(3));
+			std::string _username = parsed_command.at(1);
+			std::string _p2p_ip = parsed_command.at(2);
+			int _p2p_port = std::stoi(parsed_command.at(3));
 			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
 				user_info_map.find(_username);
 			if(_user_info_map_itr != user_info_map.end())
@@ -288,14 +290,14 @@ void server::handle_command_from_client(int sockfd, std::string command)
 	}
 	else if(_command_operator == "i")
 	{
-		if(_parsed_command.size() < 3)
+		if(parsed_command.size() < 3)
 		{
 			send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Invalid Command");
 		}
 		else
 		{
-			std::string _username = _parsed_command.at(1);
-			std::string _potential_friend_username = _parsed_command.at(2);
+			std::string _username = parsed_command.at(1);
+			std::string _potential_friend_username = parsed_command.at(2);
 			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
 				user_info_map.find(_username);
 			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
@@ -323,9 +325,9 @@ void server::handle_command_from_client(int sockfd, std::string command)
 				{
 					std::string _data_to_friend = _username;
 					std::string _message_from_friend = "";
-					if(_parsed_command.size() > 3)
+					if(parsed_command.size() > 3)
 					{
-						_message_from_friend = _parsed_command.at(3);
+						_message_from_friend = parsed_command.at(3);
 						_data_to_friend += (_sentinel + _message_from_friend);
 					}
 					_friend_user_info_map_itr->second.potential_friends_list.push_back(_username);
@@ -343,14 +345,14 @@ void server::handle_command_from_client(int sockfd, std::string command)
 	}
 	else if(_command_operator == "ia" || _command_operator == "id")
 	{
-		if(_parsed_command.size() < 3)
+		if(parsed_command.size() < 3)
 		{
 			send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Invalid Command");
 		}
 		else
 		{
-			std::string _username = _parsed_command.at(1);
-			std::string _potential_friend_username = _parsed_command.at(2);
+			std::string _username = parsed_command.at(1);
+			std::string _potential_friend_username = parsed_command.at(2);
 			std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
 				user_info_map.find(_username);
 			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
@@ -393,9 +395,9 @@ void server::handle_command_from_client(int sockfd, std::string command)
 				{
 					std::string _data_to_friend = _username;
 					std::string _message_from_friend = "";
-					if(_parsed_command.size() > 3)
+					if(parsed_command.size() > 3)
 					{
-						_message_from_friend = _parsed_command.at(3);
+						_message_from_friend = parsed_command.at(3);
 						_data_to_friend += (_sentinel + _message_from_friend);
 					}
 					if(_command_operator == "ia")
@@ -432,6 +434,25 @@ void server::handle_command_from_client(int sockfd, std::string command)
 				send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "User not found");
 			}
 		}
+	}
+	else if(_command_operator == "logout")
+	{
+		send_data_to_client(sockfd, _command_operator, std::string("200"));
+		std::string _username = parsed_command.at(1);
+		std::unordered_map<std::string, user_info>::iterator _user_info_itr =
+			user_info_map.find(_username);
+		if(_user_info_itr != user_info_map.end())
+		{
+			_user_info_itr->second.is_logged_in = false;
+			_user_info_itr->second.ip = "";
+			_user_info_itr->second.port = -1;
+			_user_info_itr->second.sockfd = -1;
+		}
+		send_logout_info_to_clients(_username);
+	}
+	else
+	{
+		send_data_to_client(sockfd, "fatal", std::string("500") + _sentinel + "Request not supported");
 	}
 }
 
@@ -486,6 +507,38 @@ void server::send_location_info_to_clients(std::string username)
 		_data_to_user = std::to_string(_number_of_online_friends) + _data_to_user;
 		send_data_to_client(_user_info.sockfd, _command_to_user, _data_to_user);
 	}
+}
+
+void server::send_logout_info_to_clients(std::string username)
+{
+	std::unordered_map<std::string, user_info>::iterator _user_info_map_itr = 
+		user_info_map.find(username);
+	if(_user_info_map_itr != user_info_map.end())
+	{
+		user_info _user_info = _user_info_map_itr->second;
+		std::vector<std::string> _contact_usernames_list = _user_info.contact_user_name_list;
+		std::vector<std::string>::iterator _contact_usernames_list_itr = 
+			_contact_usernames_list.begin();
+		
+		std::string _data_to_user = "";
+		while(_contact_usernames_list_itr != _contact_usernames_list.end())
+		{
+			std::string _friend_username = *_contact_usernames_list_itr;
+			std::unordered_map<std::string, user_info>::iterator _friend_user_info_map_itr = 
+				user_info_map.find(_friend_username);
+			if(_friend_user_info_map_itr != user_info_map.end())
+			{
+				user_info _friend_user_info = _friend_user_info_map_itr->second;
+				if(_friend_user_info.is_logged_in)
+				{
+					int _friend_sockfd = _friend_user_info.sockfd;
+					std::string _command_to_friend = "rm_loc_friend";
+					send_data_to_client(_friend_sockfd, _command_to_friend, username);
+				}
+			}
+			_contact_usernames_list_itr++;
+		}
+	}	
 }
 
 void server::sigint_handler(int signal)

@@ -90,6 +90,12 @@ int client::start()
 
 int client::send_data_to_server(std::string data)
 {
+    utility::trim_string(data);
+    std::cout << data << std::endl;
+    if(data.empty())
+    {
+        return EXIT_FAILURE;
+    }
     if(sockfd != -1)
     {
         response_from_server.clear();
@@ -126,6 +132,12 @@ int client::start_p2p()
 {
     pthread_t tid;
     pthread_create(&tid, NULL, &process_start_p2p, NULL);
+    return EXIT_SUCCESS;
+}
+
+int client::stop_p2p()
+{
+    // stop p2p may be with condition variables
     return EXIT_SUCCESS;
 }
 
@@ -198,14 +210,33 @@ void client::handle_command_from_server(int sockfd, std::string command)
     {
         int _number_of_online_friends = std::stoi(_client->response_from_server.at(1));
         int _friend_position = 1;
+        std::string _friend_user_name = "";
         for(int _i=0; _i < _number_of_online_friends; _i++)
         {
-            std::string _friend_user_name = _client->response_from_server.at(++_friend_position);
+            _friend_user_name = _client->response_from_server.at(++_friend_position);
             std::string _friend_ip = _client->response_from_server.at(++_friend_position);
             int _friend_port = std::stoi(_client->response_from_server.at(++_friend_position));
             friend_info _friend_info(_friend_user_name, _friend_ip, _friend_port);
             _client->online_friends_list[_friend_user_name] = _friend_info;
         }
+        if(_command_operator == "loc_friend")
+        {
+            std::cout << _friend_user_name << " Logged in" << std::endl;
+        }
+        _client->print_online_friends();
+    }
+    else if(_command_operator == "rm_loc_friend")
+    {
+        std::string _username = _client->response_from_server.at(1);
+
+        std::unordered_map<std::string, friend_info>::iterator _friend_info_itr = 
+            _client->online_friends_list.find(_username);
+        if(_friend_info_itr != _client->online_friends_list.end())
+        {
+            _client->online_friends_list.erase(_friend_info_itr);
+        }
+        std::cout << _username << " Logged out" << std::endl;
+        _client->print_online_friends();
     }
     else if(_command_operator == "ir")
     {
@@ -269,6 +300,26 @@ void * client::process_connection_p2p(void *arg) {
     }
     close(sockfd);
     return(NULL);
+}
+
+void client::print_online_friends()
+{
+    if(online_friends_list.empty())
+    {
+        std::cout << "No friend online" << std::endl;
+        return;
+    }
+
+    std::cout << "Number of online friends: " << online_friends_list.size() << std::endl;
+    std::unordered_map<std::string, friend_info>::iterator _online_friends_itr =
+        online_friends_list.begin();
+    while(_online_friends_itr != online_friends_list.end())
+    {
+        friend_info _friend_info = _online_friends_itr->second;
+        std::cout << "Username: " << _friend_info.user_name << "; IP: " <<
+            _friend_info.ip << "; Port: " << _friend_info.port << std::endl;
+        _online_friends_itr++;
+    }
 }
 
 void * client::process_start_p2p(void *arg)
