@@ -455,7 +455,7 @@ void * client::process_start_p2p(void *arg)
 
     listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
 
-    while(_client->is_peer_running)
+    while(true) // _client->is_peer_running
     {
         sock_len = sizeof(cli_addr);
         cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
