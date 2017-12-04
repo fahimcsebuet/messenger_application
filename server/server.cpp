@@ -345,7 +345,7 @@ void server::handle_command_from_client(int sockfd, std::vector<std::string> par
 	}
 	else if(_command_operator == "m")
 	{
-		if(parsed_command.size() < 3)
+		if(parsed_command.size() < 4)
 		{
 			send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Invalid Message");
 		}

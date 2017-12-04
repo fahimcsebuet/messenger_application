@@ -102,7 +102,6 @@ int client::send_data_to_server(std::string data)
         response_from_server.clear();
         response_received = false;
         write(sockfd, data.c_str(), data.length());
-        std::cout << "Processing..." << std::endl;
         std::unique_lock<std::mutex> _response_lock(response_mutex);
         while(!response_received)
         {
