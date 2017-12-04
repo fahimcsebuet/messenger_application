@@ -384,6 +384,10 @@ void server::handle_command_from_client(int sockfd, std::vector<std::string> par
 
 					if(_friend_user_info.is_logged_in)
 						send_data_to_client(_friend_user_info.sockfd, "mr", _data_to_friend);
+					else
+					{
+						send_data_to_client(sockfd, _command_operator, std::string("500") + _sentinel + "Not Online");
+					}
 
 					send_data_to_client(sockfd, _command_operator, std::string("200"));
 				}
