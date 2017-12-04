@@ -23,6 +23,7 @@ client* client::_client = NULL;
 int client::init(std::string configuration_file_path)
 {
     _client = this;
+    is_peer_running = false;
     response_received = false;
     signal(SIGINT, sigint_handler);
     this->configuration_file_path = configuration_file_path;
@@ -30,7 +31,7 @@ int client::init(std::string configuration_file_path)
     _configuration_file_handler.load_configuration(configuration_map);
 
     p2p_ip = get_fully_qualified_domain_name();
-    p2p_port = 5100; // Port for p2p connection
+    p2p_port = 5555; // Port for p2p connection
     online_friends_list = {};
     response_from_server = {};
     return EXIT_SUCCESS;
@@ -91,7 +92,6 @@ int client::start()
 int client::send_data_to_server(std::string data)
 {
     utility::trim_string(data);
-    std::cout << data << std::endl;
     if(data.empty())
     {
         return EXIT_FAILURE;
@@ -107,6 +107,20 @@ int client::send_data_to_server(std::string data)
         {
             response_condition_variable.wait(_response_lock);
         }
+    }
+    return EXIT_SUCCESS;
+}
+
+int client::send_data_to_peer(int in_sockfd, std::string data)
+{
+    utility::trim_string(data);
+    if(data.empty())
+    {
+        return EXIT_FAILURE;
+    }
+    if(in_sockfd != -1)
+    {
+        write(in_sockfd, data.c_str(), data.length());
     }
     return EXIT_SUCCESS;
 }
@@ -130,6 +144,7 @@ int client::_exit()
 
 int client::start_p2p()
 {
+    is_peer_running = true;
     pthread_t tid;
     pthread_create(&tid, NULL, &process_start_p2p, NULL);
     return EXIT_SUCCESS;
@@ -137,7 +152,75 @@ int client::start_p2p()
 
 int client::stop_p2p()
 {
+    is_peer_running = false;
     // stop p2p may be with condition variables
+    return EXIT_SUCCESS;
+}
+
+int client::connect_to_peer(std::string peer_username)
+{
+    std::unique_lock<std::mutex> _lock(online_friends_list_mutex);
+    std::unordered_map<std::string, friend_info>::iterator _online_friends_itr =
+        online_friends_list.find(peer_username);
+
+    if(_online_friends_itr == online_friends_list.end())
+    {
+        std::cout << "User not available or logged in" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    friend_info _peer_info = _online_friends_itr->second;
+
+    if(_peer_info.connected)
+    {
+        return EXIT_SUCCESS;
+    }
+
+    int rv, flag, *sock_ptr;
+    struct addrinfo hints, *res, *ressave;
+    pthread_t tid;
+
+    const char * _servhost = _peer_info.ip.c_str();
+    const char * _servport = std::to_string(_peer_info.port).c_str();
+
+    bzero(&hints, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    
+    if ((rv = getaddrinfo(_servhost, _servport, &hints, &res)) != 0)
+    {
+        std::cout << "getaddrinfo wrong: " << gai_strerror(rv) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    ressave = res;
+    flag = 0;
+    do 
+    {
+        _online_friends_itr->second.sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (_online_friends_itr->second.sockfd < 0) 
+            continue;
+        if (connect(_online_friends_itr->second.sockfd, res->ai_addr, res->ai_addrlen) == 0)
+        {
+            flag = 1;
+            break;
+        }
+        close(_online_friends_itr->second.sockfd);
+    } while ((res = res->ai_next) != NULL);
+
+    freeaddrinfo(ressave);
+
+    if (flag == 0)
+    {
+        fprintf(stderr, "cannot connect\n");
+        return EXIT_FAILURE;
+    }
+
+    sock_ptr = (int *)malloc(sizeof(int));
+    *sock_ptr = _online_friends_itr->second.sockfd;
+    pthread_create(&tid, NULL, &process_connect_to_p2p, (void*)sock_ptr);
+    _online_friends_itr->second.connected = true;
+
     return EXIT_SUCCESS;
 }
 
@@ -164,6 +247,35 @@ void * client::process_connection(void *arg)
         }
         buf[n] = '\0';
         handle_command_from_server(sockfd, std::string(buf));
+    }
+}
+
+void * client::process_connect_to_p2p(void *arg)
+{
+    int _sockfd;
+    _sockfd = *((int *)arg);
+    free(arg);
+    int n;
+    char buf[MAXBUFLEN];
+    pthread_detach(pthread_self());
+    while (true)
+    {
+        n = read(_sockfd, buf, MAXBUFLEN);
+        if (n <= 0)
+        {
+            if (n == 0)
+            {
+                std::cout << "server closed" << std::endl;
+            }
+            else
+            {
+                std::cout << "something wrong" << std::endl;
+            }
+            close(sockfd);
+            exit(1);
+        }
+        buf[n] = '\0';
+        handle_command_from_peer(_sockfd, std::string(buf));
     }
 }
 
@@ -269,6 +381,11 @@ void client::handle_command_from_server(int sockfd, std::string command)
     _client->response_condition_variable.notify_all();
 }
 
+void client::handle_command_from_peer(int sockfd, std::string command)
+{
+    std::cout << command << std::endl;
+}
+
 void client::sigint_handler(int signal)
 {
     _client->_exit();
@@ -276,29 +393,28 @@ void client::sigint_handler(int signal)
 }
 
 void * client::process_connection_p2p(void *arg) {
-    int sockfd;
+    int _sockfd;
     ssize_t n;
     char buf[MAXBUFLEN];
 
-    sockfd = *((int *)arg);
+    _sockfd = *((int *)arg);
     free(arg);
 
     pthread_detach(pthread_self());
-	while ((n = read(sockfd, buf, MAXBUFLEN)) > 0)
+	while ((n = read(_sockfd, buf, MAXBUFLEN)) > 0)
 	{
         buf[n] = '\0';
-        std::cout << buf << std::endl;
-        write(sockfd, buf, strlen(buf));
+        handle_command_from_peer(_sockfd, std::string(buf));
     }
 	if (n == 0)
 	{
-        std::cout << "client closed" << std::endl;
+        std::cout << "peer closed" << std::endl;
 	}
 	else
 	{
         std::cout << "something wrong" << std::endl;
     }
-    close(sockfd);
+    close(_sockfd);
     return(NULL);
 }
 
@@ -339,7 +455,7 @@ void * client::process_start_p2p(void *arg)
 
     listen(serv_sockfd, 10); // 10 is the number of backlogs in the queue
 
-    for (; ;)
+    while(_client->is_peer_running)
     {
         sock_len = sizeof(cli_addr);
         cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&cli_addr, &sock_len);
@@ -353,6 +469,7 @@ void * client::process_start_p2p(void *arg)
         pthread_create(&tid, NULL, &process_connection_p2p, (void*)sock_ptr);
     }
 
+    close(serv_sockfd);
     return(NULL);
 }
 

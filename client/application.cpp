@@ -227,9 +227,9 @@ int handle_p2p_commands(client* in_client)
         if(!_parsed_command.empty())
         {
             std::string _command_operator = _parsed_command.at(0);
-            std::string _data_for_server = _command_operator + _sentinel + in_client->get_username();
             if(_command_operator == "i" || _command_operator == "ia" || _command_operator == "id")
             {
+                std::string _data_for_server = _command_operator + _sentinel + in_client->get_username();
                 if(_parsed_command.at(1) == in_client->get_username())
                 {
                     std::cout << "Can not be friend of self" << std::endl;
@@ -240,8 +240,35 @@ int handle_p2p_commands(client* in_client)
                 {
                     _data_for_server += (_sentinel + _parsed_command.at(i));
                 }
+
+                in_client->send_data_to_server(_data_for_server);
             }
-            in_client->send_data_to_server(_data_for_server);
+            else if(_command_operator == "m")
+            {
+                std::string _data_for_peer = _command_operator + _sentinel + in_client->get_username();
+                if(_parsed_command.at(1) == in_client->get_username())
+                {
+                    std::cout << "Can not send message to self" << std::endl;
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
+                for(unsigned int i=1; i<_parsed_command.size(); i++)
+                {
+                    _data_for_peer += (_sentinel + _parsed_command.at(i));
+                }
+                std::string _peer_username = _parsed_command.at(1);
+                int _res = in_client->connect_to_peer(_peer_username);
+                std::unordered_map<std::string, friend_info>::iterator _friend_info_itr =
+                    in_client->get_online_friends_list().find(_peer_username);
+                if(_res == EXIT_SUCCESS && _friend_info_itr->second.connected && _friend_info_itr->second.sockfd != -1)
+                    in_client->send_data_to_peer(_friend_info_itr->second.sockfd, _data_for_peer);
+                else
+                {
+                    std::cout << "Connection Problem" << std::endl;
+                    std::cout << "Type command" << std::endl;
+                    getline(std::cin, _command);
+                }
+            }
         }
 		else
 		{
