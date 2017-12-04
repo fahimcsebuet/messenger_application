@@ -243,6 +243,7 @@ void * client::process_connection(void *arg)
                 std::cout << "something wrong" << std::endl;
             }
             close(sockfd);
+            _client->_exit();
             exit(1);
         }
         buf[n] = '\0';
@@ -273,7 +274,7 @@ void * client::process_connect_to_p2p(void *arg)
                 std::cout << "something wrong" << std::endl;
             }
             close(sockfd);
-            exit(1);
+            return(NULL);
         }
         buf[n] = '\0';
         handle_command_from_peer(_sockfd, std::string(buf));
